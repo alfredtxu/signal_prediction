@@ -1,0 +1,240 @@
+clc
+clear 
+close all
+
+%% project directory (Home / Office)
+curr_dir = 'D:\x_gdrive\ic_welcom_leap_fm\b_src_matlab';
+% curr_dir = 'G:\My Drive\ic_welcom_leap_fm\b_src_matlab';
+fdir = [curr_dir '\z14_olddata_mat_proc_new'];
+rdir = [curr_dir '\z15_olddata_mat_proc_new_summary'];
+cd(curr_dir);
+
+%% Loading data
+num_p = 6;
+num_files = 131;
+fper = ceil(num_files / num_p);
+
+for por = 1 : num_p
+    
+    % localise the files for each portion
+    curr_p = por;
+    fidx_s = fper*(curr_p-1)+1;
+    if curr_p == num_p
+        fidx_e = num_files;
+    else
+        fidx_e = fper*curr_p;
+    end
+    num_filesP = fidx_e - fidx_s + 1;
+
+    % load result file(s)
+    % example: RA302_butter_all_olddata_P001_022_FMsnr23_IMUx2_OLs20_OLf5_LN5_LL25_WN100_WL100_Match.mat
+    cd(fdir)
+    portions = [sprintf('%03d',fidx_s) '_' sprintf('%03d',fidx_e)];
+    snr_th = num2str(23);
+    Nstd_IMU = num2str(2); % 2-4
+    ols_perc = num2str(0.20*100);
+    olf_perc = num2str(0.10*100); % 5%, 10%
+    noise_l = num2str(0.05*100);
+    low_l = num2str(0.25*100);
+    noise_w = num2str(1.00*100);
+    low_w = num2str(1.00*100);
+    
+    match_file = ['RA302_butter_all_olddata_P' portions '_FMsnr' snr_th '_IMUx' Nstd_IMU '_OLs' ols_perc '_OLf' olf_perc '_LN' noise_l '_LL' low_l '_WN' noise_w '_WL' low_w '_Match.mat'];
+    sens_file = ['RA302_butter_all_olddata_P' portions '_FMsnr' snr_th '_IMUx' Nstd_IMU '_OLs' ols_perc '_OLf' olf_perc '_LN' noise_l '_LL' low_l '_WN' noise_w '_WL' low_w '_IMUSens.mat'];
+    fm_file = ['RA302_butter_all_olddata_P' portions '_FMsnr' snr_th '_IMUx' Nstd_IMU '_OLs' ols_perc '_OLf' olf_perc '_LN' noise_l '_LL' low_l '_WN' noise_w '_WL' low_w '_FM.mat'];
+    fmLabel_file = ['RA302_butter_all_olddata_P' portions '_FMsnr' snr_th '_IMUx' Nstd_IMU '_OLs' ols_perc '_OLf' olf_perc '_LN' noise_l '_LL' low_l '_WN' noise_w '_WL' low_w '_FM_label.mat'];
+    
+    fprintf('Loading files ... portion: %d \n', por);
+    load(match_file);
+    load(sens_file);
+    load(fmLabel_file);
+    load(fm_file);
+    cd(curr_dir);
+
+    % thresholds for IMUa & FMs
+    th_IMUa_all{por, :} = IMUaTB_th;
+    th_FM_all{por, :} = FM_TB_th;
+
+    % Sensitivity & Precision
+    % Layers: i, n1, n2, w1, w2
+    %
+    % matchTB_FM_Sens_sensi = matchTB_FM_Sens_num / sensT_mapC;
+    % matchTB_FM_Sens_preci = matchTB_FM_Sens_num / FM_segTB_dil_fOR_acouORpiezC;
+    % [matchTB_FM_Sens_num(:,1,1) sensT_mapC matchTB_FM_Sens_sensi(:,1,1)]
+    %
+    % matches
+    sensT_mapCAll{por, :} = sensT_mapC;
+
+    matchTB_FM_Sens_numAll{por, :} = squeeze(matchTB_FM_Sens_num);
+    FM_segTB_dil_fOR_a1a2pCAll{por, :} = squeeze(FM_segTB_dil_fOR_a1a2pC);
+
+    % matches + IMUa
+    sensTB_mapIMUaCAll{por, :} = sensTB_mapIMUaC;
+
+    matchTB_FM_Sens_IMUa_m1_numAll{por, :} = squeeze(matchTB_FM_Sens_IMUa_m1_num);
+    FM_segTB_dil_IMUa_m1_fOR_a1a2pCAll{por, :} = squeeze(FM_segTB_dil_IMUa_m1_fOR_a1a2pC);
+    
+    matchTB_FM_Sens_IMUa_m2_numAll{por, :} = squeeze(matchTB_FM_Sens_IMUa_m2_num);
+    FM_segTB_dil_IMUa_m2_fOR_a1a2pCAll{por, :} = squeeze(FM_segTB_dil_IMUa_m2_fOR_a1a2pC);
+    
+    clear curr_p fidx_s fidx_e num_filesP
+    clear FM_segTB_dil_fOR_a1a2pC FM_segTB_dil_fOR_a1a2pL ...
+          FM_segTB_dil_IMUa_m1_fOR_a1a2pC FM_segTB_dil_IMUa_m1_fOR_a1a2pL ...
+          FM_segTB_dil_IMUa_m2_fOR_a1a2pC FM_segTB_dil_IMUa_m2_fOR_a1a2pL
+    clear matchTB_FM_Sens matchTB_FM_Sens_INV matchTB_FM_Sens_num matchTB_FM_Sens_num_INV ...
+          matchTB_FM_Sens_preci matchTB_FM_Sens_sensi...
+          matchTB_FM_Sens_IMUa_m1 matchTB_FM_Sens_IMUa_m1_INV matchTB_FM_Sens_IMUa_m1_num matchTB_FM_Sens_IMUa_m1_num_INV ...
+          matchTB_FM_Sens_IMUa_m1_preci matchTB_FM_Sens_IMUa_m1_sensi ...
+          matchTB_FM_Sens_IMUa_m2 matchTB_FM_Sens_IMUa_m2_INV matchTB_FM_Sens_IMUa_m2_num matchTB_FM_Sens_IMUa_m2_num_INV ...
+          matchTB_FM_Sens_IMUa_m2_preci matchTB_FM_Sens_IMUa_m2_sensi 
+    clear IMUaTB_th IMUaTB_map IMUaTB_mapDil ...
+          sensT_map sensT_mapC sensT_mapL ...
+          sensTB_mapIMUa sensTB_mapIMUaC sensTB_mapIMUaL
+    clear FM_suiteTB ...
+          FM_TB_th FM_segTB FM_segTB_dil ...
+          FM_segTB_dil_IMUa_m1 ...
+          FM_segTB_dil_IMUa_m2 ...
+          FM_segTB_dil_fOR_a1a2 FM_segTB_dil_fOR_a1p FM_segTB_dil_fOR_a2p ...
+          FM_segTB_dil_fOR_acce FM_segTB_dil_IMUa_m1_fOR_a1a2 FM_segTB_dil_IMUa_m1_fOR_a1p ...
+          FM_segTB_dil_IMUa_m1_fOR_a2p FM_segTB_dil_IMUa_m1_fOR_acce FM_segTB_dil_IMUa_m2_fOR_a1a2 FM_segTB_dil_IMUa_m2_fOR_a1p ...
+          FM_segTB_dil_IMUa_m2_fOR_a2p FM_segTB_dil_IMUa_m2_fOR_acce FM_segTB_fOR_a1a2 FM_segTB_fOR_a1p FM_segTB_fOR_a2p FM_segTB_fOR_acce ...
+          FM_segTB_fOR_acou FM_segTB_fOR_piez FM_segTB_fOR_a1a2p ...
+          FM_segTB_dil_fOR_acou FM_segTB_dil_fOR_piez FM_segTB_dil_fOR_a1a2p ...
+          FM_segTB_dil_IMUa_m1_fOR_acou FM_segTB_dil_IMUa_m1_fOR_piez FM_segTB_dil_IMUa_m1_fOR_a1a2p ...
+          FM_segTB_dil_IMUa_m2_fOR_acou FM_segTB_dil_IMUa_m2_fOR_piez FM_segTB_dil_IMUa_m2_fOR_a1a2p ...
+          FM_segTB_dil_fOR_a1a2pL FM_segTB_dil_fOR_a1a2pC ...
+          FM_segTB_dil_IMUa_m1_fOR_a1a2pL FM_segTB_dil_IMUa_m1_fOR_a1a2pC ...
+          FM_segTB_dil_IMUa_m2_fOR_a1a2pL FM_segTB_dil_IMUa_m2_fOR_a1a2pC
+end
+
+%% Combining thresholds
+all_th_imu = cat(1, th_IMUa_all{:});
+all_th_fm = squeeze(cat(1, th_FM_all{:}));
+all_th_acouL = all_th_fm(:, :, 1);
+all_th_acouM = all_th_fm(:, :, 2);
+all_th_acouR = all_th_fm(:, :, 3);
+all_th_piezL = all_th_fm(:, :, 4);
+all_th_piezM = all_th_fm(:, :, 5);
+all_th_piezR = all_th_fm(:, :, 6);
+
+%% Combining
+all_sens = cat(1, sensT_mapCAll{:});
+all_tp = cat(1, matchTB_FM_Sens_numAll{:});
+all_fm = cat(1, FM_segTB_dil_fOR_a1a2pCAll{:});
+
+all_sens_IMua = cat(1, sensTB_mapIMUaCAll{:});
+all_tp_m1 = cat(1, matchTB_FM_Sens_IMUa_m1_numAll{:});
+all_fm_m1 = cat(1, FM_segTB_dil_IMUa_m1_fOR_a1a2pCAll{:});
+all_tp_m2 = cat(1, matchTB_FM_Sens_IMUa_m2_numAll{:});
+all_fm_m2 = cat(1, FM_segTB_dil_IMUa_m2_fOR_a1a2pCAll{:});
+
+for i = 1 : size(all_fm, 2)
+    tmp_cmp = all_fm(:, i) <= all_sens;
+    tmp_cmpI = ~tmp_cmp;
+    all_tpN(:, i) = all_tp(:, i) .* tmp_cmp + all_sens .* tmp_cmpI;
+    all_fmZ{:, i} = find(all_fm(:, i) == 0);
+
+    tmp_cmpM1 = all_fm_m1(:, i) <= all_sens_IMua;
+    tmp_cmpM1I = ~tmp_cmpM1;
+    all_tp_m1N(:, i) = all_tp_m1(:, i) .* tmp_cmpM1 + all_sens_IMua .* tmp_cmpM1I;
+    all_fm_m1Z{:, i} = find(all_fm_m1(:, i) == 0);
+
+    tmp_cmpM2 = all_fm_m2(:, i) <= all_sens_IMua;
+    tmp_cmpM2I = ~tmp_cmpM2;
+    all_tp_m2N(:, i) = all_tp_m2(:, i) .* tmp_cmpM2 + all_sens_IMua .* tmp_cmpM2I;
+    all_fm_m2Z{:, i} = find(all_fm_m2(:, i) == 0);
+end
+
+% sensitiviy (remove NANs)
+all_sensZ = find(all_sens == 0);
+if ~isempty(all_sensZ)
+    all_tpNR = all_tpN;
+    all_tpNR(all_sensZ) = [];
+else
+    all_tpNR = all_tpN;
+end
+all_sensiN = all_tpN ./ all_sens;
+all_sensiN_mu = mean(all_sensiN, 1);
+
+% precision (remove NANs)
+for i = 1 : size(all_fm, 2)
+    
+    tmp_all_tpR = all_tp(:, i);
+    tmp_all_tpR(all_fmZ{i}) = [];
+
+    tmp_all_fmR = all_fm(:, i);
+    tmp_all_fmR(all_fmZ{i}) = [];
+
+    all_preciR{:, i} = tmp_all_tpR ./ tmp_all_fmR;
+    all_preciR_mu(:, i) = mean(all_preciR{i}, 1);
+
+    clear tmp_all_tpR tmp_all_fmR
+end
+% --------------------------------------------------------------
+
+% sensitiviy (remove NANs) m1 / m2
+all_sens_IMuaZ = find(all_sens_IMua == 0);
+if ~isempty(all_sens_IMuaZ)
+    all_tp_m1NR = all_tp_m1N;
+    all_tp_m1NR(all_sens_IMuaZ) = [];
+
+    all_tp_m2NR = all_tp_m2N;
+    all_tp_m2NR(all_sens_IMuaZ) = [];
+else
+    all_tp_m1NR = all_tp_m1N;
+    all_tp_m2NR = all_tp_m2N;
+end
+
+all_sensi_m1N = all_tp_m1N ./ all_sens_IMua;
+all_sensi_m1N_mu = mean(all_sensi_m1N, 1);
+
+all_sensi_m2N = all_tp_m2N ./ all_sens_IMua;
+all_sensi_m2N_mu = mean(all_sensi_m2N, 1);
+
+% precision (remove NANs) m1 /m2
+for i = 1 : size(all_fm_m1, 2)
+    
+    % m1
+    tmp_all_tp_m1R = all_tp_m1(:, i);
+    tmp_all_tp_m1R(all_fm_m1Z{i}) = [];
+    tmp_all_fm_m1R = all_fm_m1(:, i);
+    tmp_all_fm_m1R(all_fm_m1Z{i}) = [];
+
+    all_preci_m1R{:, i} = tmp_all_tp_m1R ./ tmp_all_fm_m1R;
+    all_preci_m1R_mu(:, i) = mean(all_preci_m1R{i}, 1);
+
+    % m2
+    tmp_all_tp_m2R = all_tp_m2(:, i);
+    tmp_all_tp_m2R(all_fm_m2Z{i}) = [];
+    tmp_all_fm_m2R = all_fm_m2(:, i);
+    tmp_all_fm_m2R(all_fm_m2Z{i}) = [];
+
+    all_preci_m2R{:, i} = tmp_all_tp_m2R ./ tmp_all_fm_m2R;
+    all_preci_m2R_mu(:, i) = mean(all_preci_m2R{i}, 1);
+
+    clear tmp_all_tp_m1R tmp_all_fm_m1R tmp_all_tp_m2R tmp_all_fm_m2R
+end
+% --------------------------------------------------------------
+
+%% save summarized results
+cd(rdir)
+res_file = ['RA302_butter_all_olddata_FMsnr' snr_th '_IMUx' Nstd_IMU '_OLs' ols_perc '_OLf' olf_perc '_LN' noise_l '_LL' low_l '_WN' noise_w '_WL' low_w '_summaryRes.mat'];
+save(res_file, 'all_preciR_mu', 'all_preci_m1R_mu', 'all_preci_m2R_mu', ...
+               'all_sensiN_mu', 'all_sensi_m1N_mu', 'all_sensi_m2N_mu', ...
+               'all_th_imu', 'all_th_fm', ...
+               'all_th_acouL', 'all_th_acouM', 'all_th_acouR', ...
+               'all_th_piezL', 'all_th_piezM', 'all_th_piezR', ...
+               'all_sensZ', 'all_sens_IMuaZ', ...
+               'all_fmZ', 'all_fm_m1Z', 'all_fm_m2Z', ...
+               '-v7.3')
+cd(curr_dir)
+
+% temporal checking
+all_sensiN_mu' 
+all_sensi_m1N_mu' 
+all_sensi_m2N_mu'
+
+all_preciR_mu' 
+all_preci_m1R_mu' 
+all_preci_m2R_mu'
+
